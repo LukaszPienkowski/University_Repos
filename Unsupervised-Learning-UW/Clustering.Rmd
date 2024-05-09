@@ -1,0 +1,78 @@
+---
+title: "Clustering"
+author: "Łukasz Pieńkowski"
+output: html_document
+---
+
+## Electricity in Europe map clustering
+The aim of the project is to find out what percentage of the picture of the map of Europe is occupied by the color that symbolizes electricity. The Clara algorithm was used for this purpose.
+
+## Importing image and data processing
+
+In this step code import libraries and read photo. Then colors from the photo are processed to matrixes. In this case it allows to print them as one data frame. Then the map prints on the plot. 
+
+```{r y~x, echo=TRUE}
+library(jpeg)
+library(ggplot2)
+library(rasterImage)
+library(cluster)
+
+img <- readJPEG("europe_map.jpg")
+
+dm <- dim(img)
+rgbImg <- data.frame(x=rep(1:dm[2], each = dm[1]),  y = rep(dm[1]:1, dm[2]), 
+                     r.value = as.vector(img[,,1]),  g.value = as.vector(img[,,2]), 
+                     b.value = as.vector(img[,,3]))
+
+plot(y ~ x, data = rgbImg, main="Electricity in Europe",
+     col = rgb(rgbImg[c("r.value", "g.value", "b.value")]),
+     asp = 1, pch = ".")
+```
+
+Then using Clara algorithm I’m looking for the optimal number of clusters.
+
+```{r temp}
+temp <- c()
+
+for (i in 1:20) {
+  temp1 <- clara(rgbImg[, c("r.value", "g.value", "b.value")], i)
+  temp[i] <- temp1$silinfo$avg.width
+}
+summary(temp)
+```
+
+
+```{r}
+temp
+```
+
+It looks like the optimal number of clusters is 2. However after printing plot with 2 clusters it doesn’t seem to be proper.
+
+```{r clara, echo=TRUE}
+map = rgbImg[, c("r.value", "g.value", "b.value")]
+clara <- clara(map, 2)
+colours <- rgb(clara$medoids[clara$clustering, ])
+plot(y ~ x, data=rgbImg, main="Electricity in Europe",
+     col = colours, 
+     asp = 1, pch = ".")
+```
+
+For this reason I decided to try it with 3 clusters. The generated map is much more like the one from the beginning. For this reason, further analysis will proceed with 3 clusters.
+
+```{r, echo=TRUE}
+map = rgbImg[, c("r.value", "g.value", "b.value")]
+clara <- clara(map, 3)
+plot(silhouette(clara))
+
+colours <- rgb(clara$medoids[clara$clustering, ])
+plot(y ~ x, data=rgbImg, main="Electricity in Europe",
+     col = colours, 
+     asp = 1, pch = ".")
+```
+```{r}
+table(colours)
+
+length(colours[colours == "#BEBB9A"])/length(colours) * 100
+```
+## Summary
+After analysis and calculations, we got the result we were looking for. 5.09% of the map is the color, which symbolizes the area where the presence of electricity is visible. The satellite image shows light in these areas.

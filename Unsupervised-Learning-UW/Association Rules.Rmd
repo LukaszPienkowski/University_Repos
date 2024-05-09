@@ -1,0 +1,67 @@
+---
+title: "Association Rules"
+author: "Łukasz Pieńkowski"
+output: html_document
+---
+
+## Introduction
+In this project I've taken data from Starbucks survey and analyse it to determine the profile of a typical customer basing on some conditions. Source: https://www.kaggle.com/mahirahmzh/starbucks-customer-retention-malaysia-survey?select=Starbucks+satisfactory+survey.csv
+
+```{r}
+library(arules)
+library(arulesViz)
+data <- read.csv('Starbucks satisfactory survey.csv', sep = ',')
+summary(data)
+
+colnames(data) <- c("Time", "Gender", "Age", "Status", "Income", "VisitNo", "Method", "TimeSpend",
+                    "Location", "MembershipCard", "MostFreqProduct", "SpendPurchase", "ProductRate", "PriceRate",
+                    "PromoRate", "AmbianceRate", "WifiRate", "ServiceRate", "ChoosenRate",
+                    "PromoMethod", "Loyal")
+head(data)
+```
+
+At this stage I need to read this data using "read.transactions" function. Also I've dropped some columns with information that is not important for this analysis.
+
+```{r}
+write.csv(data[,c(2:12)], file="Sommer.csv")
+trans1 <- read.transactions("Sommer.csv", format = "basket", sep = ',', skip = 0)
+inspect(head(trans1))
+size(trans1)
+length(trans1)
+```
+
+## Profile of person that buys using drive-thru method - Apriori algorithm
+
+```{r}
+rules.DriveThru <- apriori(data = trans1, parameter = list(supp=0.05, conf=0.08), 
+                               appearance=list(default="lhs", rhs="Drive-thru"), 
+                               control=list(verbose=F))
+rules.DriveThru.byconf<-sort(rules.DriveThru, by="confidence", decreasing=TRUE)
+inspect(head(rules.DriveThru.byconf))
+```
+Based on the results, we are able to profile the person who uses the drive-thru method. This is the person who spends around RM20-RM40 and spends less than 30 minutes at Starbucks.
+
+## Profile of person that buys cold drinks in Starbucks - Apriori algorithm
+```{r}
+rules.CD <- apriori(data=trans1, parameter=list(supp=0.05, conf=0.08), 
+                             appearance=list(default="lhs", rhs="Cold drinks"), 
+                             control=list(verbose=F)) 
+
+rules.CD.byconf<-sort(rules.CD, by="confidence", decreasing=TRUE)
+inspect(head(rules.CD.byconf))
+```
+Based on the results, we are able to profile the person who buys cold drinks. This person spends 30 minutes at Starbucks, the nearest local is no more than 3 kilometers from her home, and she is usually female.
+
+## Profile of person that visits Starbucks rarely - Apriori algorithm
+```{r}
+rules.d <- apriori(data=trans1, parameter=list(supp=0.05, conf=0.08), 
+                             appearance=list(default="lhs", rhs="Rarely"), 
+                             control=list(verbose=F)) 
+
+rules.d.byconf<-sort(rules.d, by="confidence", decreasing=TRUE)
+inspect(head(rules.d.byconf))
+```
+Based on the results, we are able to profile the person who visits Starbucks infrequently. This person is buying cold drinks, spending less than RM20, having a membership card and living within 1km of the closest local. 
+
+## Conclusion
+As shown by the analyses performed. Using the survey data and the Apriori algorithm we are able to profile a typical customer based on a given characteristic.
